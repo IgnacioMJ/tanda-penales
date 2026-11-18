@@ -1,0 +1,7 @@
+{
+  "interpreter": "./vendor/micropython/micropython.mjs",
+  "files": {
+    "./automatas.py": "./automatas.py",
+    "./grafo.py": "./grafo.py"
+  }
+}

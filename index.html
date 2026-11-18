@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tanda de penales: Argentina vs Francia (AFD + Mealy)</title>
+  <meta name="description" content="Simulación de una tanda de penales modelada con un AFD y una máquina de Mealy. Proyecto final de Fundamentos de Ciencias de la Computación, UNPA-UACO.">
+  <link rel="icon" href="assets/escudo_arg.png">
+  <link rel="stylesheet" href="vendor/pyscript/core.css">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="vendor/pyscript/core.js"></script>
+</head>
+<body class="cargando">
+
+<div id="carga" class="carga" role="status">
+  <div class="carga-pelota" aria-hidden="true"></div>
+  <p class="carga-texto">Preparando la cancha…</p>
+  <p class="carga-aviso" id="carga-aviso" hidden></p>
+</div>
+
+<header class="marcador" id="marcador">
+  <div class="equipo eq-a" id="equipo-a">
+    <img class="escudo" src="assets/escudo_arg.png" alt="Escudo de la Selección Argentina" width="246" height="360">
+    <div class="eq-texto">
+      <span class="eq-nombre">Argentina</span>
+      <span class="eq-rol">Equipo A, jugás vos</span>
+    </div>
+    <ol class="serie" id="serie-a" aria-label="Penales de Argentina"></ol>
+    <output class="goles" id="goles-a" aria-label="Goles de Argentina">0</output>
+  </div>
+  <div class="marcador-centro">
+    <span class="fase" id="fase">Penal 1 de 6</span>
+    <span class="estado-chip" id="estado-chip" title="Estado actual del AFD">q0_0</span>
+  </div>
+  <div class="equipo eq-b" id="equipo-b">
+    <output class="goles" id="goles-b" aria-label="Goles de Francia">0</output>
+    <ol class="serie" id="serie-b" aria-label="Penales de Francia"></ol>
+    <div class="eq-texto">
+      <span class="eq-nombre">Francia</span>
+      <span class="eq-rol">Equipo B, juega la PC</span>
+    </div>
+    <img class="escudo" src="assets/escudo_fra.png" alt="Escudo de la Selección de Francia" width="240" height="360">
+  </div>
+</header>
+
+<nav class="barra" aria-label="Opciones">
+  <div class="segmentos" role="group" aria-label="Modo">
+    <button type="button" class="seg activo" data-modo="jugar" aria-pressed="true">Jugar</button>
+    <button type="button" class="seg" data-modo="simular" aria-pressed="false">Simular</button>
+    <button type="button" class="seg" data-modo="probar" aria-pressed="false">Probar palabra</button>
+  </div>
+  <div class="segmentos" role="group" aria-label="Penales por equipo">
+    <button type="button" class="seg activo" data-version="3" aria-pressed="true">3 penales</button>
+    <button type="button" class="seg" data-version="5" aria-pressed="false">5 penales</button>
+  </div>
+  <button type="button" class="boton-sec" id="btn-reiniciar">Reiniciar tanda</button>
+</nav>
+
+<main class="tablero" id="tablero">
+  <div class="col-izq" id="col-izq">
+  <!-- ===================== LA CANCHA ===================== -->
+  <section class="cancha" id="cancha" aria-label="Cancha">
+    <div class="escena ataja-fra" id="escena">
+      <svg class="escena-svg" viewBox="150 148 660 385" aria-hidden="true">
+        <defs>
+          <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#07130f"/>
+            <stop offset="1" stop-color="#12271f"/>
+          </linearGradient>
+          <radialGradient id="foco" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#fffbe8" stop-opacity="0.55"/>
+            <stop offset="1" stop-color="#fffbe8" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="pasto" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#1c4a33"/>
+            <stop offset="1" stop-color="#2a6a47"/>
+          </linearGradient>
+          <pattern id="hinchada-a" width="14" height="11" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="2.3" fill="#74ACDF"/>
+            <circle cx="10" cy="3.5" r="2.3" fill="#EEF2EA"/>
+            <circle cx="6.5" cy="8.5" r="2.3" fill="#74ACDF"/>
+          </pattern>
+          <pattern id="hinchada-b" width="14" height="11" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="2.3" fill="#3D63C9"/>
+            <circle cx="10" cy="3.5" r="2.3" fill="#EEF2EA"/>
+            <circle cx="6.5" cy="8.5" r="2.3" fill="#E1323B"/>
+          </pattern>
+          <pattern id="malla" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <path d="M0,0 L0,16 M0,0 L16,0" stroke="#EEF2EA" stroke-width="1" stroke-opacity="0.32" fill="none"/>
+          </pattern>
+        </defs>
+
+        <rect width="960" height="560" fill="url(#cielo)"/>
+        <circle cx="110" cy="-10" r="230" fill="url(#foco)"/>
+        <circle cx="850" cy="-10" r="230" fill="url(#foco)"/>
+
+        <!-- tribunas: mitad argentina, mitad francesa -->
+        <path d="M0,62 L960,62 L960,208 L0,208 Z" fill="#0c1a15"/>
+        <rect x="0" y="70" width="480" height="134" fill="url(#hinchada-a)" opacity="0.42"/>
+        <rect x="480" y="70" width="480" height="134" fill="url(#hinchada-b)" opacity="0.42"/>
+        <path d="M0,62 L960,62" stroke="#EEF2EA" stroke-opacity="0.15" stroke-width="2"/>
+
+        <!-- carteles de publicidad -->
+        <g class="carteles">
+          <rect x="0" y="206" width="960" height="30" fill="#0a1410"/>
+          <text x="208" y="227" class="c-cel">UNPA UACO</text>
+          <text x="480" y="227" class="c-tenue">FUNDAMENTOS DE CIENCIAS DE LA COMPUTACIÓN</text>
+          <text x="752" y="227" class="c-sol">AFD + MEALY</text>
+        </g>
+
+        <!-- césped con franjas en perspectiva -->
+        <rect x="0" y="236" width="960" height="324" fill="url(#pasto)"/>
+        <g fill="#000" opacity="0.09">
+          <path d="M0,236 L96,236 L-60,560 L-260,560 Z"/>
+          <path d="M192,236 L288,236 L220,560 L60,560 Z"/>
+          <path d="M384,236 L480,236 L460,560 L340,560 Z"/>
+          <path d="M576,236 L672,236 L740,560 L620,560 Z"/>
+          <path d="M768,236 L864,236 L1020,560 L900,560 Z"/>
+        </g>
+        <!-- líneas -->
+        <g stroke="#EEF2EA" stroke-opacity="0.75" stroke-width="3" fill="none">
+          <path d="M0,382 L960,382"/>
+          <path d="M196,382 L150,438 L810,438 L764,382"/>
+        </g>
+        <ellipse cx="480" cy="512" rx="7" ry="3.5" fill="#EEF2EA" opacity="0.85"/>
+
+        <!-- arco -->
+        <g id="red" class="red">
+          <path d="M282,206 L300,186 L660,186 L678,206 Z" fill="url(#malla)"/>
+          <path d="M270,196 L300,186 L314,360 L270,382 Z" fill="url(#malla)"/>
+          <path d="M690,196 L660,186 L646,360 L690,382 Z" fill="url(#malla)"/>
+          <rect x="300" y="186" width="360" height="176" fill="url(#malla)"/>
+          <rect x="300" y="186" width="360" height="176" fill="#000" opacity="0.18"/>
+        </g>
+        <g class="palos">
+          <rect x="262" y="190" width="10" height="194" rx="2"/>
+          <rect x="688" y="190" width="10" height="194" rx="2"/>
+          <rect x="262" y="188" width="436" height="10" rx="2"/>
+        </g>
+
+        <!-- arquero (estilizado) -->
+        <g id="arquero" class="arquero">
+          <ellipse class="sombra" cx="480" cy="381" rx="38" ry="5"/>
+          <path class="kit2" d="M466,330 L462,378 L474,378 L479,336 Z"/>
+          <path class="kit2" d="M494,330 L498,378 L486,378 L481,336 Z"/>
+          <path class="kit" d="M458,290 Q480,280 502,290 L506,336 L454,336 Z"/>
+          <path class="kit" d="M460,294 Q440,288 428,262 L438,256 Q448,276 466,282 Z"/>
+          <path class="kit" d="M500,294 Q520,288 532,262 L522,256 Q512,276 494,282 Z"/>
+          <circle class="guante" cx="430" cy="254" r="9"/>
+          <circle class="guante" cx="530" cy="254" r="9"/>
+          <rect class="kit2" x="457" y="316" width="46" height="8" rx="2"/>
+          <circle class="cabeza" cx="480" cy="268" r="13"/>
+        </g>
+
+        <!-- pelota -->
+        <ellipse id="sombra-pelota" class="sombra-pelota" cx="480" cy="522" rx="17" ry="4"/>
+        <g id="pelota" class="pelota">
+          <circle cx="480" cy="505" r="16" fill="#F7F9F5" stroke="#9aa59d" stroke-width="1.2"/>
+          <path d="M480,499 L486,503.5 L483.7,510.5 L476.3,510.5 L474,503.5 Z" fill="#1d2a24"/>
+          <path d="M480,499 L480,490 M486,503.5 L494,500 M483.7,510.5 L488,518 M476.3,510.5 L472,518 M474,503.5 L466,500" stroke="#1d2a24" stroke-width="1.4"/>
+        </g>
+      </svg>
+
+      <!-- zonas del arco: mismas coordenadas que el dibujo -->
+      <div class="zonas" id="zonas">
+        <button type="button" class="zona" data-lado="I" aria-keyshortcuts="I ArrowLeft">
+          <kbd>I</kbd><span class="zona-txt">Izquierda</span>
+        </button>
+        <button type="button" class="zona" data-lado="C" aria-keyshortcuts="C ArrowDown ArrowUp">
+          <kbd>C</kbd><span class="zona-txt">Centro</span>
+        </button>
+        <button type="button" class="zona" data-lado="D" aria-keyshortcuts="D ArrowRight">
+          <kbd>D</kbd><span class="zona-txt">Derecha</span>
+        </button>
+      </div>
+      <div class="cartel" id="cartel" aria-hidden="true"></div>
+    </div>
+
+    <p class="consigna" id="consigna" aria-live="polite">Patea Argentina. Elegí dónde patear.</p>
+
+    <!-- controles del modo Simular -->
+    <div class="panel-sim" id="panel-simular" hidden>
+      <button type="button" class="boton" id="btn-sim">Simular la tanda</button>
+      <button type="button" class="boton-sec" id="btn-paso-sim">Un penal</button>
+      <div class="segmentos chico" role="group" aria-label="Velocidad">
+        <button type="button" class="seg" data-vel="1.4" aria-pressed="false">Lenta</button>
+        <button type="button" class="seg activo" data-vel="1" aria-pressed="true">Normal</button>
+        <button type="button" class="seg" data-vel="0.45" aria-pressed="false">Rápida</button>
+      </div>
+      <p class="nota">La PC elige todos los lados al azar. El azar decide qué palabra se lee, no cómo se lee.</p>
+    </div>
+
+    <!-- modo Probar palabra -->
+    <div class="panel-probar" id="panel-probar" hidden>
+      <div class="segmentos" role="group" aria-label="Autómata a probar">
+        <button type="button" class="seg activo" data-prueba="afd" aria-pressed="true">Tanda (AFD)</button>
+        <button type="button" class="seg" data-prueba="mealy" aria-pressed="false">Arquero (Mealy)</button>
+      </div>
+      <label class="campo" for="entrada">
+        <span id="entrada-etq">Palabra sobre Σ = {g, f}</span>
+        <input id="entrada" type="text" autocomplete="off" spellcheck="false" placeholder="por ejemplo, gfgf" maxlength="60">
+      </label>
+      <div class="acciones">
+        <button type="button" class="boton" id="btn-ejecutar">Ejecutar todo</button>
+        <button type="button" class="boton-sec" id="btn-paso">Un paso</button>
+        <button type="button" class="boton-sec" id="btn-volver">Volver a q0</button>
+      </div>
+      <div class="presets" id="presets"></div>
+      <div class="veredicto" id="veredicto" aria-live="polite"></div>
+      <div class="tabla-mealy" id="tabla-mealy" hidden></div>
+    </div>
+
+    <details class="ayuda">
+      <summary>Cómo se juega</summary>
+      <p>Cuando patea <b>Argentina</b> elegís el lado (I, C o D). El arquero de Francia es la máquina de Mealy: se tira a la predicción que emitió después de tu remate anterior. En tu primer remate todavía no predijo nada y se tira al azar. Si acierta el lado es <code>f</code>, si no es <code>g</code>.</p>
+      <p>Cuando patea <b>Francia</b>, la PC elige el lado al azar y vos elegís dónde tirarte. La Mealy no participa.</p>
+      <p>Cada <code>g</code> o <code>f</code> es una letra que lee el AFD. La tanda termina cuando el AFD llega a GANA_A o GANA_B. Los lados son siempre los de la pantalla. Teclas: I, C, D o las flechas.</p>
+    </details>
+  </section>
+
+  <section class="pizarra pz-mealy" id="pz-mealy" aria-label="Arquero de Francia">
+    <div class="pz-cabeza">
+      <h2>El arquero de Francia</h2>
+      <span class="pz-sub">máquina de Mealy: cada flecha es remate ; predicción para tu próximo remate</span>
+    </div>
+    <div class="mealy-cuerpo">
+      <div class="grafo-host chico" id="mealy-host"></div>
+      <div class="mealy-info">
+        <p class="prediccion" id="prediccion">Primer remate: todavía no hay predicción, se tira al azar.</p>
+        <div class="cinta-doble">
+          <span class="cinta-etq">Tus remates <small>(entrada)</small></span><ol class="cinta" id="cinta-in" aria-label="Remates leídos por la Mealy"></ol>
+          <span class="cinta-etq">Se tiró a</span><ol class="cinta" id="cinta-tiro" aria-label="Lado al que se tiró el arquero en cada remate"></ol>
+          <span class="cinta-etq">Predicción <small>(salida)</small></span><ol class="cinta" id="cinta-out" aria-label="Predicciones de la Mealy para el remate siguiente"></ol>
+        </div>
+        <p class="nota-mealy">En cada columna: tu remate, adónde se tiró el arquero (la predicción de la columna anterior; en la primera, al azar) y la predicción que emitió para tu próximo remate.</p>
+        <label class="interruptor" id="tapar-etq"><input type="checkbox" id="tapar"> Tapar esta pizarra mientras pateás</label>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <!-- ===================== LA PIZARRA ===================== -->
+  <section class="pizarra pz-tanda" id="pz-tanda" aria-label="AFD de la tanda">
+    <div class="pz-bloque pz-afd">
+      <div class="pz-cabeza">
+        <h2>La tanda</h2>
+        <span class="pz-sub" id="afd-sub">AFD de 18 estados</span>
+      </div>
+      <div class="grafo-host" id="afd-host"></div>
+      <div class="cinta-fila">
+        <span class="cinta-etq">Palabra leída</span>
+        <ol class="cinta" id="cinta-afd" aria-label="Palabra leída por el AFD"></ol>
+      </div>
+    </div>
+
+    <div class="pz-bloque pz-registro">
+        <div class="pz-cabeza">
+          <h2>Recorrido</h2>
+          <span class="pz-sub">un renglón por penal</span>
+        </div>
+      <ol class="registro" id="registro"></ol>
+    </div>
+  </section>
+</main>
+
+<footer class="pie">
+  <p>Proyecto final de Fundamentos de Ciencias de la Computación, UNPA, Unidad Académica Caleta Olivia. Reales, Grabano y Morales Jumilla. Lógica en Python (PyScript con MicroPython). Escudos y fotos: propiedad de sus titulares, uso académico.</p>
+</footer>
+
+<!-- ===================== CAMPEÓN ===================== -->
+<div class="campeon" id="campeon" role="dialog" aria-modal="true" aria-labelledby="campeon-titulo" hidden>
+  <img class="campeon-foto" id="campeon-foto" src="" alt="">
+  <div class="campeon-velo"></div>
+  <div class="confeti" id="confeti" aria-hidden="true"></div>
+  <div class="campeon-contenido">
+    <img class="campeon-escudo" id="campeon-escudo" src="" alt="">
+    <h2 class="campeon-titulo" id="campeon-titulo"></h2>
+    <p class="campeon-marcador" id="campeon-marcador"></p>
+    <p class="campeon-formal" id="campeon-formal"></p>
+    <div class="acciones">
+      <button type="button" class="boton" id="btn-otra">Jugar otra vez</button>
+      <button type="button" class="boton-sec claro" id="btn-ver">Ver la pizarra</button>
+    </div>
+  </div>
+</div>
+
+<div class="letra-vuela" id="letra-vuela" aria-hidden="true"></div>
+
+<script type="mpy" src="main.py" config="pyscript.json"></script>
+<script>
+  // Solo para avisar si la página no puede cargar Python (abierta como archivo).
+  (function () {
+    var aviso = document.getElementById('carga-aviso');
+    function mostrar(t) { aviso.textContent = t; aviso.hidden = false; }
+    if (location.protocol === 'file:') {
+      mostrar('Abriste el archivo directamente y el navegador bloquea la carga de Python. ' +
+              'Abrí una terminal en esta carpeta, ejecutá  python -m http.server 8000 --bind 127.0.0.1  y entrá a http://localhost:8000');
+      return;
+    }
+    setTimeout(function () {
+      if (document.body.classList.contains('cargando')) {
+        mostrar('Está tardando más de lo normal. Recargá la página; si sigue igual, revisá la consola del navegador (F12).');
+      }
+    }, 15000);
+  })();
+</script>
+</body>
+</html>
