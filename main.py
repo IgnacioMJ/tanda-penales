@@ -378,7 +378,27 @@ def marcador_dibujar(nueva=None):
 
 
 def registro_reset():
-    el("registro").innerHTML = '<li class="vacio">Todavía no se pateó ningún penal.</li>'
+    if S.modo == "probar":
+        texto = "Todavía no se leyó ningún símbolo."
+    else:
+        texto = "Todavía no se pateó ningún penal."
+    el("registro").innerHTML = '<li class="vacio">%s</li>' % texto
+
+
+def registro_paso_palabra(k, simbolo, de, a):
+    """En Probar palabra: un renglón por símbolo leído (posición impar = A, par = B)."""
+    ol = el("registro")
+    if ol.firstElementChild is not None and ol.firstElementChild.classList.contains("vacio"):
+        ol.innerHTML = ""
+    equipo = "a" if k % 2 == 0 else "b"
+    quien = "ARG" if equipo == "a" else "FRA"
+    lectura = "lee %s (%s)" % (simbolo, "gol" if simbolo == "g" else "no fue gol")
+    li = document.createElement("li")
+    li.innerHTML = ('<span class="n">%d</span><span class="quien %s">%s</span>'
+                    '<span>%s</span><span class="tr">%s <b>%s</b> %s</span>'
+                    % (k + 1, equipo, quien, lectura, de, simbolo, a))
+    ol.appendChild(li)
+    ol.scrollTop = ol.scrollHeight
 
 
 def registro_agregar(j):
@@ -779,6 +799,7 @@ def prueba_reiniciar():
     mealy_reiniciar()
     el("veredicto").innerHTML = ""
     el("veredicto").className = "veredicto"
+    registro_reset()
     prueba_cinta()
     if P["tipo"] == "mealy":
         prueba_tabla_mealy()
@@ -884,6 +905,7 @@ def prueba_paso():
     k = P["i"]
     if P["tipo"] == "afd":
         afd_paso(res["estados"][k], res["estados"][k + 1])
+        registro_paso_palabra(k, palabra[k], res["estados"][k], res["estados"][k + 1])
     else:
         mealy_paso(res["estados"][k], res["estados"][k + 1])
     P["i"] = k + 1
